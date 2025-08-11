@@ -46,17 +46,17 @@ Select your activity level:
    3. High  (5+ workouts/week)
 Activity Level (1/2/3)> 2
 
-🧠 Final Testosterone-Boosting Picks:
+Final Testosterone-Boosting Picks:
 
-🍽️  Beef Products
+Beef Products
   - Beef Liver (Raw) — Score: 0.91
   - Beef Ribeye (Grilled) — Score: 0.86
 
-🍽️  Dairy and Egg Products
+Dairy and Egg Products
   - Egg (Whole) — Score: 0.83
   - Cottage Cheese — Score: 0.78
 
-🍽️  Fruits and Fruit Juices
+Fruits and Fruit Juices
   - Banana — Score: 0.72
   - Kiwi — Score: 0.68
 ```
