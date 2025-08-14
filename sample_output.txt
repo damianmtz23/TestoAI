@@ -1,0 +1,10 @@
+=== Testosterone-Boosting Food Recommender (Demo) ===
+Press Enter to consider all FoodGroups, or type an exact FoodGroup name.
+Type 'exit' to quit.
+
+FoodGroup> 
+Select your activity level:
+  1) Low    (0–2 workouts/week)
+  2) Medium (3–4 workouts/week)
+  3) High   (5+ workouts/week)
+Activity Level (1/2/3)> 
