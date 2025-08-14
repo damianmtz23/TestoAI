@@ -108,7 +108,12 @@ while True:
     filtered = emb_df[emb_df.apply(lambda r: activity_filter(r, level), axis=1)].copy()
 
     # Exclude processed/combined items
-    bad_terms = "with fruit|yogurt|milkshake|smoothie|pudding|dessert|custard|ice cream|imitation"
+    # Exclude obviously processed, fat-only, or imitation items (all groups)
+    bad_terms = (
+        "with fruit|yogurt|milkshake|smoothie|pudding|dessert|custard|ice cream|imitation|"
+        "rendered fat|subcutaneous fat|separable fat|fat only|suet|tallow|lard|corned|patties|"
+        "cured|bacon|skin only|retail cuts"
+    )
     filtered = filtered[~filtered["Descrip"].str.lower().str.contains(bad_terms)]
 
     # Build prototype from seeds
@@ -127,7 +132,11 @@ while True:
         filtered = filtered[filtered["FoodGroup"] == grp]
 
     # Fruit pick based on activity
+    # Fruit pick based on activity
     fruit_pool = filtered[filtered["FoodGroup"] == "Fruits and Fruit Juices"].copy()
+    fruit_pool = fruit_pool[~fruit_pool["Descrip"].str.lower().str.contains(
+        "juice|smoothie|dried|puree|syrup|powder|fruit punch|cocktail|v8|babyfood|canned|frozen"
+    )]
     if level == "low":
         fruit_choice = fruit_pool[fruit_pool["fruit_type"] == "low_sugar"]
     elif level == "medium":
@@ -135,6 +144,7 @@ while True:
     else:
         fruit_choice = fruit_pool[fruit_pool["fruit_type"] == "high_sugar"]
     top_fruit = fruit_choice.sort_values("sim_to_ideal", ascending=False).head(1)
+
 
     # Beef group logic (1 organ max, 3 muscle meats)
     final = []
@@ -144,26 +154,37 @@ while True:
         sub = sub[~sub["Descrip"].str.lower().str.contains(
             "subcutaneous fat|seam fat|intermuscular fat|retail cuts, separable fat|suet|tallow|lard|marrow|canned|imitation|patties|corned|processed"
         )]
+
+        # Gentle activity-dependent tweak: ±0.02 * fat grams
         if level == "low":
-            sub["adjusted_sim"] = sub["sim_to_ideal"] * (1 - sub["Fat_g"].fillna(0))
+            sub["adjusted_sim"] = sub["sim_to_ideal"] - 0.02 * sub["Fat_g"].fillna(0)
         elif level == "medium":
             sub["adjusted_sim"] = sub["sim_to_ideal"]
         else:
-            sub["adjusted_sim"] = sub["sim_to_ideal"] * (1 + sub["Fat_g"].fillna(0))
+            sub["adjusted_sim"] = sub["sim_to_ideal"] + 0.02 * sub["Fat_g"].fillna(0)
+
         sub = sub.sort_values("adjusted_sim", ascending=False)
         organs = sub[sub["Descrip"].apply(is_organ)]
         others = sub[~sub["Descrip"].apply(is_organ)]
 
         picks, seen = [], set()
         def base_key(d): return ", ".join(d.split(",")[:2]).strip().lower()
+
         if not organs.empty:
-            r = organs.iloc[0]; picks.append(r); seen.add(base_key(r["Descrip"]))
+            r = organs.iloc[0]
+            picks.append(r.to_dict())
+            seen.add(base_key(r["Descrip"]))
+
         for _, r in others.iterrows():
             k = base_key(r["Descrip"])
-            if k in seen: continue
-            picks.append(r); seen.add(k)
-            if len(picks) >= 4: break
+            if k in seen:
+                continue
+            picks.append(r.to_dict())
+            seen.add(k)
+            if len(picks) >= 4:
+                break
         return picks
+
 
     # Collect ideal-group picks
     ideal_groups = ["Beef Products", "Dairy and Egg Products", "Fruits and Fruit Juices"]
@@ -174,10 +195,19 @@ while True:
         elif g == "Dairy and Egg Products":
             eggs = sub[sub["Descrip"].str.lower().str.contains("egg")]
             others = sub[~sub["Descrip"].str.lower().str.contains("egg")]
+            others = others.sort_values("sim_to_ideal", ascending=False)
+
             picks = []
-            if not eggs.empty: picks.append(eggs.iloc[0])
-            picks.extend(others.sort_values("sim_to_ideal", ascending=False).head(3 if not eggs.empty else 4))
+            if not eggs.empty:
+                picks.append(eggs.iloc[0].to_dict())
+                top_n = 3
+            else:
+                top_n = 4
+
+            picks.extend(others.head(top_n).to_dict("records"))
             final.extend(picks)
+
+
         elif g == "Fruits and Fruit Juices":
             if not top_fruit.empty:
                 final.extend(top_fruit.to_dict("records"))
@@ -194,20 +224,19 @@ while True:
         else:
             sub["adjusted_sim"] = sub["sim_to_ideal"] + 0.015 * sub["Fat_g"].fillna(0)
         if not sub.empty:
-            final.append(sub.sort_values("adjusted_sim", ascending=False).iloc[0])
-
+            final.append(sub.sort_values("adjusted_sim", ascending=False).iloc[0].to_dict())
     if not final:
         print("No recommendations found under current filters.\n")
         continue
 
     import pandas as pd
     out = pd.DataFrame(final).copy()
-    out["final_score"] = out.get("adjusted_sim", out["sim_to_ideal"])
+    out["final_score"] = out["adjusted_sim"].fillna(out["sim_to_ideal"])
     out = out.sort_values("final_score", ascending=False)
 
-    print("\n🧠 Final Testosterone-Boosting Picks:\n")
+    print("\nFinal Testosterone-Boosting Picks:\n")
     for group in out["FoodGroup"].unique():
-        print(f"🍽️  {group}")
+        print(group)
         for _, row in out[out["FoodGroup"] == group].iterrows():
             print(f"  - {format_food_description(row['Descrip'])} — Score: {round(row['final_score'], 2)}")
         print()

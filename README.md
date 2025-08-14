@@ -49,6 +49,12 @@ Then follow the prompts (choose activity level, optional FoodGroup) to see recom
 
 ---
 
+
+## Sample output
+See `sample_output.txt` for a full example run.
+
+Example (truncated):
+
 ## Data
 
 * **Source:** USDA National Nutrient Database (via `kagglehub`)
