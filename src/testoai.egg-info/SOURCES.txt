@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/testoai/_init_.py
+src/testoai/cli.py
+src/testoai/recommend.py
+src/testoai.egg-info/PKG-INFO
+src/testoai.egg-info/SOURCES.txt
+src/testoai.egg-info/dependency_links.txt
+src/testoai.egg-info/entry_points.txt
+src/testoai.egg-info/top_level.txt
