@@ -5,6 +5,9 @@
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from testoai.recommend import recommend, load_embeddings, format_food_description
@@ -20,7 +23,11 @@ except FileNotFoundError as e:
     sys.exit(1)
 
 while True:
-    grp = input("FoodGroup> ").strip()
+    try:
+        grp = input("FoodGroup> ").strip()
+    except EOFError:
+        print()
+        break
     if grp.lower() in ("exit", "quit"):
         break
     if grp and grp not in emb_df["FoodGroup"].unique():
@@ -31,7 +38,11 @@ while True:
     print("  1) Low    (0–2 workouts/week)")
     print("  2) Medium (3–4 workouts/week)")
     print("  3) High   (5+ workouts/week)")
-    lv = input("Activity Level (1/2/3)> ").strip()
+    try:
+        lv = input("Activity Level (1/2/3)> ").strip()
+    except EOFError:
+        print()
+        break
     level = "low" if lv == "1" else "high" if lv == "3" else "medium"
 
     try:
