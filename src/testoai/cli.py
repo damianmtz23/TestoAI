@@ -1,8 +1,10 @@
 # src/testoai/cli.py
 
 import argparse
+
 import pandas as pd
-from testoai.recommend import recommend, format_food_description  # canonical engine
+
+from testoai.recommend import format_food_description, recommend  # canonical engine
 
 
 def parse_food_groups(s: str):

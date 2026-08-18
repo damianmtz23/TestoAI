@@ -1,15 +1,16 @@
 # train.py
 # Trains the nutrient autoencoder, builds embeddings, and saves artifacts for the demo.
 
-import os
 import json
+import os
+
 import joblib
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from torch.utils.data import DataLoader, Dataset
 
 # Config / paths
 DATA_DIR = "data"
@@ -143,8 +144,10 @@ okay_groups  = ["Lamb, Veal, and Game Products", "Finfish and Shellfish Products
                 "Nut and Seed Products", "Pork Products", "Poultry Products"]
 
 def group_filter(group):
-    if group in ideal_groups: return 2
-    if group in okay_groups:  return 1
+    if group in ideal_groups:
+        return 2
+    if group in okay_groups:
+        return 1
     return 0
 
 emb_df["group_score"] = emb_df["FoodGroup"].apply(group_filter)

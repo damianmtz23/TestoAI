@@ -77,7 +77,10 @@ def format_food_description(desc: str) -> str:
     ]
     parts = [p.strip() for p in desc.lower().split(",") if p.strip()]
     clean = [p for p in parts if not any(b in p for b in blacklist)]
-    cook = [p for p in parts if any(x in p for x in ["cooked", "raw", "broiled", "grilled", "braised", "roasted", "moist heat", "dry heat"])]
+    cook = [
+        p for p in parts
+        if any(x in p for x in ["cooked", "raw", "broiled", "grilled", "braised", "roasted", "moist heat", "dry heat"])
+    ]
     main = " ".join(clean[:3]).title() if clean else " ".join(parts[:2]).title()
     return f"{main} ({', '.join(set(cook)).title()})" if cook else main
 

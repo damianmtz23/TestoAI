@@ -10,7 +10,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from testoai.recommend import recommend, load_embeddings, format_food_description
+from testoai.recommend import format_food_description, load_embeddings, recommend
 
 print("=== Testosterone-Boosting Food Recommender (Demo) ===")
 print("Press Enter to consider all FoodGroups, or type an exact FoodGroup name.")
