@@ -1,143 +1,92 @@
-# Macro & Micronutrient Food Recommender (TestoAI)
+# TestoAI
 
-> **What this is:** A small ML project that learns **nutrient embeddings** from the **USDA/Kaggle** dataset and recommends foods that best match a testosterone‑supportive nutrient profile.
+[![CI](https://github.com/damianmtz23/TestoAI/actions/workflows/ci.yml/badge.svg)](https://github.com/damianmtz23/TestoAI/actions/workflows/ci.yml)
 
----
+Nutrient-aware food recommendation system built on USDA nutrient data. It learns food embeddings with a small autoencoder and ranks foods by similarity to a testosterone-supportive nutrient profile (protein, zinc, magnesium, selenium, B-vitamins) — not a claim that any individual food is medically proven to raise testosterone.
 
-## Overview (high level)
+## What it does
 
-This project trains a tiny **autoencoder** (PyTorch) on hand‑picked **macro** and **micro** features, then compares each food to a **prototype** built from seed items (e.g., oysters, egg yolk, beef liver) known for key micronutrients. The recommender is **protein‑forward**, with light rules (activity awareness, food‑group preferences, and basic filters) to keep results practical.
+Given an activity level and (optionally) a food group, TestoAI returns a ranked list of foods that best match a nutrient profile built from seed foods known to be dense in the relevant micronutrients (e.g. oysters, egg yolk, beef liver). Ranking is rule-augmented: results are also shaped by activity-aware fat/calorie thresholds, food-group preferences, and filters that drop ultra-processed or near-duplicate items.
 
-* Dataset: USDA National Nutrient Database (via Kaggle).
-* Goal: Hit macro targets and favor micro‑dense foods (e.g., **zinc**, **magnesium**, **selenium**, **B‑vitamins**) while avoiding ultra‑processed items.
-* Artifacts: `data/emb_df.parquet`, `model/encoder.pt`, `model/scaler.pkl`, `model/meta.json`.
+## How it works
 
----
+```text
+USDA nutrient data (Kaggle, or bundled sample fixture)
+      ↓
+preprocessing (column selection + MinMax scaling)
+      ↓
+autoencoder (13 → 64 → 16 → 64 → 13)
+      ↓
+food embeddings (16-dim, from the encoder)
+      ↓
+canonical recommender (cosine similarity to a seed-food prototype + rules)
+      ↓
+CLI / interactive demo
+```
 
-## How foods are scored (the important part)
+`train.py` builds the embeddings and saves them along with the encoder weights and scaler to `data/` and `model/`. `src/testoai/recommend.py` loads those artifacts at inference time, scores every food by cosine similarity to the seed prototype, applies activity/food-group adjustments, and returns the top picks. `demo.py` and the `testoai` CLI both call this same function.
 
-**Features used** (columns, units):
-
-* **Macros**: Protein\_g, Fat\_g, Carb\_g, Energy\_kcal
-* **Micros**: Zinc\_mg, Magnesium\_mg, Selenium\_mcg, VitB6\_mg, VitB12\_mcg, VitA\_mcg, Iron\_mg, Sugar\_g, Fiber\_g
-* **Scaling**: per‑nutrient **MinMax** to \[0,1] (keeps mg vs g comparable).
-
-**Embedding learning** (train time):
-
-* Autoencoder: `13 → 64 → 16 (latent) → 64 → 13`, ReLU, **MSE** loss, Adam (1e‑3), \~10 epochs (tunable).
-* The encoder output is the **food embedding**.
-
-**Prototype & similarity** (inference time):
-
-* Build a **prototype vector** = mean embedding of seed foods (oysters, egg yolk, liver, etc.).
-* Score each food by **cosine similarity** to the prototype (**higher = better**).
-
-**Rules & weights** (post‑scoring tweaks):
-
-* **Protein‑forward** emphasis (boost items with strong protein signal).
-* **Activity‑aware** fat handling (slightly more lenient at high activity, stricter at low).
-* **Food‑group preferences** (e.g., Beef / Dairy‑Egg → Ideal; keep variety with Fruits/Veg based on sugar/fiber/minerals).
-* **Fruit sugar buckets** (low / moderate / high sugar by distribution percentile).
-* **Quality filters**: drop ultra‑processed/combined items; cap organ meats; de‑dupe near‑duplicates.
-
-**Final score (conceptual)**:
-`score = α · cosine(embedding, prototype)  +  β · macro‑alignment  −  penalties(rules)`  (defaults are simple; weights are easy to tune.)
-
----
-
-## Quickstart (fresh clone)
+## Quickstart
 
 ```bash
 git clone <repo>
 cd TestoAI
-
-# 1) Install the package (editable, pulls in all runtime dependencies)
 python -m pip install -e .
-
-# ...or, to also install dev tools (pytest, ruff):
-python -m pip install -e ".[dev]"
-
-# 2) Train: builds embeddings + saves artifacts to data/ and model/ (both gitignored)
 python train.py
-
-# 3) Try the interactive demo
 python demo.py
+```
 
-# ...or the CLI
+`train.py` first tries to download the full USDA National Nutrient Database via `kagglehub` (requires a Kaggle account/API token). If that's unavailable, it automatically falls back to the tracked sample fixture at `fixtures/sample_nutrients.csv` so training always succeeds — just with less food variety.
+
+## CLI usage
+
+```bash
 testoai --activity high --k 5
-testoai --food-groups "Fruits and Fruit Juices" --activity high --k 10
+testoai --food-groups "Beef Products,Poultry Products" --activity medium
 ```
 
-`data/` and `model/` are intentionally not committed — `train.py` regenerates
-them from scratch every time, so nothing from the original developer's
-machine is required.
-
-**About the dataset:** `train.py` tries to pull the full USDA National
-Nutrient Database via `kagglehub` first (this needs a Kaggle account and API
-token — see [kagglehub docs](https://github.com/Kaggle/kagglehub) for setup).
-If that's unavailable (no credentials, offline, etc.), it automatically falls
-back to a small bundled sample dataset at `fixtures/sample_nutrients.csv` (~25
-foods covering every FoodGroup used by the recommender), so `python train.py`
-always produces working artifacts — just with less variety in the results
-than the full dataset.
-
----
-
-## Example output (truncated)
-
-```
-                  FoodGroup                          Description  final_score
-0            Beef Products         Beef Liver (Raw)                  0.967060
-1  Dairy and Egg Products                  Egg Yolk (Raw)          0.928033
-2          Poultry Products      Chicken Breast (Raw)                0.926318
-```
-
----
+* `--activity`: `low`, `medium`/`moderate`, or `high` (default `moderate`)
+* `--food-groups`: comma-separated FoodGroup names to restrict results to (default: all groups)
+* `--k`: cap the number of recommendations returned (default: full curated set)
 
 ## Project structure
 
 ```
 TestoAI/
 ├─ src/testoai/
-│  ├─ __init__.py
-│  ├─ recommend.py        # ranking/scoring logic (cosine + rules)
-│  └─ cli.py              # parses flags, calls recommend(), prints a table
-├─ train.py               # regenerates artifacts from full (or sample) dataset
-├─ demo.py                # interactive demo using saved artifacts
-├─ data/                  # (generated, gitignored) embeddings & tables
-├─ model/                 # (generated, gitignored) encoder weights, scaler, meta
+│  ├─ recommend.py        # canonical ranking/scoring engine
+│  └─ cli.py               # argument parsing, calls recommend()
+├─ train.py                # builds embeddings, saves artifacts to data/ and model/
+├─ demo.py                 # interactive CLI demo
 ├─ fixtures/
-│  └─ sample_nutrients.csv  # tiny tracked dataset used when kagglehub is unavailable
-├─ pyproject.toml         # runtime deps + makes package installable; creates `testoai` command
-├─ README.md
-└─ .gitignore
+│  └─ sample_nutrients.csv # tracked fallback dataset used when Kaggle is unavailable
+├─ tests/                  # pytest suite
+├─ .github/workflows/ci.yml
+├─ pyproject.toml
+└─ README.md
 ```
 
----
+`data/` and `model/` are generated by `train.py` and are gitignored.
 
----
+## Testing / CI
 
-## Roadmap
+* `pytest` covers the recommender (`recommend()`/`load_embeddings()`) and the CLI, using synthetic/fixture-derived artifacts — no Kaggle account or network access required.
+* GitHub Actions (`.github/workflows/ci.yml`) runs `ruff check` and `pytest` on every push and pull request to `main`.
 
-**Near-term (polish)**
+## Tech stack
 
-* Provide small **pretrained AE weights** and attach to a GitHub Release.
-* Tiny **evaluation notebook** comparing cosine vs macro-distance with top-K examples.
-* **Unit tests** (pytest): column mapping, protein-forward monotonicity, fruit sugar buckets.
-* **GitHub Actions**: ruff/black + pytest (Py 3.10/3.11).
-* Sample **config files**: `examples/targets.yaml`, `examples/presets.yaml`.
+Python, PyTorch (autoencoder), scikit-learn (scaling, cosine similarity), pandas/pyarrow (data + parquet artifacts), pytest, ruff.
 
-**Next (nice-to-have)**
+## Limitations
 
-* Minimal **FastAPI** endpoint (`/recommend`) + 1-page **Streamlit** UI.
-* **Dockerfile** for one-command runs.
-* Expanded **data docs** (features, seed foods, assumptions/filters) linked from README.
+* Recommendations are heuristic/ranking-based, not medical advice.
+* There's no labeled ground truth yet, so ranking quality hasn't been evaluated against a baseline.
+* Full-quality results depend on the external USDA/Kaggle dataset; the bundled sample fixture is for demonstration and testing, not model quality.
 
----
+## Future work
 
-## Notes & Disclaimer
-
-Educational project; **not medical advice**. Results depend on dataset quality, scaling, chosen seeds/rules.
+* Streamlit front end for the demo.
+* Evaluation against a baseline (e.g. cosine ranking vs. simple macro-distance) with a small labeled comparison set.
 
 ## License
 
