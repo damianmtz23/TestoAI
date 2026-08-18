@@ -131,7 +131,7 @@ def _build_prototype(filtered: pd.DataFrame, emb_cols: List[str], seeds: Iterabl
     return valid.mean(axis=0).values.reshape(1, -1)
 
 
-def _beef_block(df_beef: pd.DataFrame, level: str) -> List[dict]:
+def _beef_block(df_beef: pd.DataFrame, level: str, limit: int = 4) -> List[dict]:
     sub = df_beef.copy()
     sub = sub[~sub["Descrip"].str.lower().str.contains(_BEEF_EXCLUDE)]
 
@@ -162,7 +162,7 @@ def _beef_block(df_beef: pd.DataFrame, level: str) -> List[dict]:
             continue
         picks.append(r.to_dict())
         seen.add(k)
-        if len(picks) >= 4:
+        if len(picks) >= limit:
             break
     return picks
 
@@ -207,6 +207,7 @@ def recommend(
     top_k: Optional[int] = None,
     targets: Optional[Dict[str, float]] = None,
     seeds: Optional[List[str]] = None,
+    per_group_limit: int = 4,
 ) -> pd.DataFrame:
     """Rank foods using the learned nutrient embeddings, activity-level
     adjustments, and the food-group nutrition rules originally in demo.py.
@@ -221,6 +222,11 @@ def recommend(
         to influence the ranking instead.
     seeds: food descriptions used to build the similarity prototype; defaults
         to SEED_FOODS.
+    per_group_limit: max picks taken from each Beef/Dairy/OKAY_GROUPS group
+        before combining and applying top_k (default 4, matching the original
+        demo.py curation). The single best-matching fruit is always returned
+        regardless of this limit, since that pick is chosen by sugar bucket
+        rather than by count.
     """
     level = _normalize_activity(activity)
     df, emb_cols = load_embeddings()
@@ -258,16 +264,16 @@ def recommend(
     for g in IDEAL_GROUPS:
         sub = filtered[filtered["FoodGroup"] == g].copy()
         if g == "Beef Products":
-            final.extend(_beef_block(sub, level))
+            final.extend(_beef_block(sub, level, limit=per_group_limit))
         elif g == "Dairy and Egg Products":
             eggs = sub[sub["Descrip"].str.lower().str.contains("egg")]
             others = sub[~sub["Descrip"].str.lower().str.contains("egg")].sort_values("sim_to_ideal", ascending=False)
             picks = []
             if not eggs.empty:
                 picks.append(eggs.iloc[0].to_dict())
-                top_n = 3
+                top_n = per_group_limit - 1
             else:
-                top_n = 4
+                top_n = per_group_limit
             picks.extend(others.head(top_n).to_dict("records"))
             final.extend(picks)
         elif g == "Fruits and Fruit Juices":
@@ -283,7 +289,7 @@ def recommend(
         else:
             sub["adjusted_sim"] = sub["sim_to_ideal"] + 0.015 * sub["Fat_g"].fillna(0)
         if not sub.empty:
-            final.append(sub.sort_values("adjusted_sim", ascending=False).iloc[0].to_dict())
+            final.extend(sub.sort_values("adjusted_sim", ascending=False).head(per_group_limit).to_dict("records"))
 
     if not final:
         return pd.DataFrame(columns=list(df.columns) + ["final_score"])
