@@ -48,6 +48,10 @@ _BEEF_EXCLUDE = (
 
 _ACTIVITY_ALIASES = {"moderate": "medium", "normal": "medium"}
 
+# Columns the recommender actually reads from data/emb_df.parquet. Kept in
+# sync with train.py's artifact generation.
+REQUIRED_COLUMNS = {"Descrip", "FoodGroup", "Energy_kcal", "Fat_g", "Sugar_g", "group_score"}
+
 _cache: Dict[str, Tuple[pd.DataFrame, List[str]]] = {}
 
 
@@ -175,6 +179,14 @@ def load_embeddings(path: Optional[Union[str, Path]] = None, refresh: bool = Fal
         raise FileNotFoundError(f"{path} not found. Run: python train.py")
 
     df = pd.read_parquet(path)
+
+    missing = REQUIRED_COLUMNS - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"{path} is missing required columns: {sorted(missing)}. "
+            "The training artifact may be stale — regenerate it with `python train.py`."
+        )
+
     emb_cols = [c for c in df.columns if c.startswith("emb_")]
     if not emb_cols:
         raise ValueError("No embedding columns found. Re-run training.")
