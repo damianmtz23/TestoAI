@@ -68,7 +68,8 @@ pip install -e .
 
 # 2) (Optional) write a tiny demo dataset to data/emb_df.parquet (see snippet in README)
 # 3) Run the CLI (uses saved artifacts if present)
-testoai --targets "protein=194,fat=65,carbs=247" --k 5
+testoai --activity high --k 5
+testoai --food-groups "Fruits and Fruit Juices" --activity high --k 10
 ```
 
 ---
@@ -76,12 +77,10 @@ testoai --targets "protein=194,fat=65,carbs=247" --k 5
 ## Example output (truncated)
 
 ```
-               Description  Protein_g  Fat_g  Carb_g     score
-0      Greek yogurt (200g)         20    4.0       8  0.967060
-1  96/4 Ground beef (113g)         24    4.0       0  0.928033
-2    Chicken breast (100g)         31    3.6       0  0.926318
-3           Eggs (3 large)         18   15.0       1  0.917042
-4      Ribeye steak (100g)         19   20.0       0  0.892692
+                  FoodGroup                          Description  final_score
+0            Beef Products         Beef Liver (Raw)                  0.967060
+1  Dairy and Egg Products                  Egg Yolk (Raw)          0.928033
+2          Poultry Products      Chicken Breast (Raw)                0.926318
 ```
 
 ---
