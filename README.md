@@ -51,8 +51,11 @@ This project trains a tiny **autoencoder** (PyTorch) on hand‑picked **macro** 
 git clone <repo>
 cd TestoAI
 
-# 1) Install the package (editable, pulls in requirements.txt deps)
+# 1) Install the package (editable, pulls in all runtime dependencies)
 python -m pip install -e .
+
+# ...or, to also install dev tools (pytest, ruff):
+python -m pip install -e ".[dev]"
 
 # 2) Train: builds embeddings + saves artifacts to data/ and model/ (both gitignored)
 python train.py
@@ -105,8 +108,7 @@ TestoAI/
 ├─ model/                 # (generated, gitignored) encoder weights, scaler, meta
 ├─ fixtures/
 │  └─ sample_nutrients.csv  # tiny tracked dataset used when kagglehub is unavailable
-├─ requirements.txt
-├─ pyproject.toml         # makes package installable; creates `testoai` command
+├─ pyproject.toml         # runtime deps + makes package installable; creates `testoai` command
 ├─ README.md
 └─ .gitignore
 ```
