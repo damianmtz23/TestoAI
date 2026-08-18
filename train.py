@@ -114,10 +114,18 @@ with torch.no_grad():
     _, Z = model(X.to(device))
     Z = Z.cpu().numpy()
 
+# X (and therefore Z) was built directly from df_clean in row order, with no
+# shuffling, so we can attach embeddings by position instead of merging back
+# on the description text (which would be fragile/duplicative if two foods
+# share a Descrip value).
 emb_cols = [f"emb_{i}" for i in range(Z.shape[1])]
-emb_df = pd.DataFrame(Z, columns=emb_cols)
-emb_df['Descrip'] = df_clean['Descrip'].values
-emb_df = emb_df.merge(df_clean[meta_cols + ['Energy_kcal','Fat_g','Sugar_g','Fiber_g']], on='Descrip', how='left')
+emb_df = pd.concat(
+    [
+        df_clean[meta_cols + nutr_cols].reset_index(drop=True),
+        pd.DataFrame(Z, columns=emb_cols),
+    ],
+    axis=1,
+)
 
 # Add group score for later weighting
 ideal_groups = ["Beef Products", "Dairy and Egg Products", "Fruits and Fruit Juices"]
