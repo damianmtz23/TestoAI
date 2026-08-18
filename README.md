@@ -45,32 +45,38 @@ This project trains a tiny **autoencoder** (PyTorch) on hand‑picked **macro** 
 
 ---
 
-## Two ways to run (share the spotlight)
-
-### A) Full model path (original, with your Kaggle dataset)
+## Quickstart (fresh clone)
 
 ```bash
-# 1) Install deps
-pip install -r requirements.txt
+git clone <repo>
+cd TestoAI
 
-# 2) Train (downloads data via kagglehub, preprocesses, trains AE, saves artifacts)
+# 1) Install the package (editable, pulls in requirements.txt deps)
+python -m pip install -e .
+
+# 2) Train: builds embeddings + saves artifacts to data/ and model/ (both gitignored)
 python train.py
 
 # 3) Try the interactive demo
 python demo.py
-```
 
-### B) Fast demo via CLI (optional)
-
-```bash
-# 1) Install package (editable for dev)
-pip install -e .
-
-# 2) (Optional) write a tiny demo dataset to data/emb_df.parquet (see snippet in README)
-# 3) Run the CLI (uses saved artifacts if present)
+# ...or the CLI
 testoai --activity high --k 5
 testoai --food-groups "Fruits and Fruit Juices" --activity high --k 10
 ```
+
+`data/` and `model/` are intentionally not committed — `train.py` regenerates
+them from scratch every time, so nothing from the original developer's
+machine is required.
+
+**About the dataset:** `train.py` tries to pull the full USDA National
+Nutrient Database via `kagglehub` first (this needs a Kaggle account and API
+token — see [kagglehub docs](https://github.com/Kaggle/kagglehub) for setup).
+If that's unavailable (no credentials, offline, etc.), it automatically falls
+back to a small bundled sample dataset at `fixtures/sample_nutrients.csv` (~25
+foods covering every FoodGroup used by the recommender), so `python train.py`
+always produces working artifacts — just with less variety in the results
+than the full dataset.
 
 ---
 
@@ -93,10 +99,12 @@ TestoAI/
 │  ├─ __init__.py
 │  ├─ recommend.py        # ranking/scoring logic (cosine + rules)
 │  └─ cli.py              # parses flags, calls recommend(), prints a table
-├─ train.py               # regenerates artifacts from full dataset
+├─ train.py               # regenerates artifacts from full (or sample) dataset
 ├─ demo.py                # interactive demo using saved artifacts
-├─ data/                  # (generated) embeddings & tables
-├─ model/                 # (generated) encoder weights, scaler, meta
+├─ data/                  # (generated, gitignored) embeddings & tables
+├─ model/                 # (generated, gitignored) encoder weights, scaler, meta
+├─ fixtures/
+│  └─ sample_nutrients.csv  # tiny tracked dataset used when kagglehub is unavailable
 ├─ requirements.txt
 ├─ pyproject.toml         # makes package installable; creates `testoai` command
 ├─ README.md
