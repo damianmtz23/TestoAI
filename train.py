@@ -23,10 +23,20 @@ EPOCHS = 10
 LR = 1e-3
 RANDOM_STATE = 42
 
-# Load USDA dataset via kagglehub
-import kagglehub
-path = kagglehub.dataset_download("haithemhermessi/usda-national-nutrient-database")
-df = pd.read_csv(os.path.join(path, "train.csv"))
+# Load the USDA dataset. By default this pulls the full dataset via kagglehub
+# (requires a Kaggle account + API token, see README). If that's not set up,
+# fall back to the small bundled sample so training still works out of the box.
+SAMPLE_CSV = os.path.join("fixtures", "sample_nutrients.csv")
+
+try:
+    import kagglehub
+    kaggle_path = kagglehub.dataset_download("haithemhermessi/usda-national-nutrient-database")
+    df = pd.read_csv(os.path.join(kaggle_path, "train.csv"))
+    print(f"Loaded full USDA dataset via kagglehub ({len(df)} rows).")
+except Exception as e:
+    print(f"kagglehub dataset unavailable ({e}).")
+    print(f"Falling back to bundled sample dataset: {SAMPLE_CSV}")
+    df = pd.read_csv(SAMPLE_CSV)
 
 # Columns to keep/normalize
 nutr_cols = [
