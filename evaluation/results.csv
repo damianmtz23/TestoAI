@@ -1,0 +1,5 @@
+method,top_n,avg_protein_g,avg_sugar_g,avg_fiber_g,avg_energy_kcal,unique_food_groups,overlap_with_embedding_count,overlap_with_embedding_pct,rank_corr_with_embedding,dataset_rows
+macro_baseline,10,21.910999999999998,1.714,0.9100000000000001,253.6,8,0,0.0,0.8547696290423636,6894
+raw_nutrient_baseline,10,16.979999999999997,0.0,0.0,172.7,4,2,20.0,0.8703448056786257,6894
+autoencoder_embedding,10,19.694000000000003,0.0,0.0,146.3,4,10,100.0,1.0,6894
+final_testoai,10,21.736,0.0,0.0,179.6,1,0,0.0,,6894
