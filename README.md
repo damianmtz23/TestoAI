@@ -77,16 +77,47 @@ TestoAI/
 
 Python, PyTorch (autoencoder), scikit-learn (scaling, cosine similarity), pandas/pyarrow (data + parquet artifacts), pytest, ruff.
 
-## Limitations
+## Evaluation
 
+`evaluation/evaluate.py` asks one question: does the learned autoencoder embedding provide anything useful compared with simpler nutrient-based baselines? There's no labeled ground truth for "correct" food recommendations, so this is a descriptive comparison of ranking behavior and nutrient composition, not an accuracy benchmark.
+
+```bash
+python evaluation/evaluate.py
+```
+
+### Methods compared
+
+1. **Macro cosine baseline** — cosine similarity to the mean normalized `Protein_g`/`Fat_g`/`Carb_g` vector of the seed foods, using the fitted `MinMaxScaler`.
+2. **Raw normalized nutrient cosine** — same approach, but using all 13 normalized nutrient columns from `model/meta.json` (no autoencoder).
+3. **Autoencoder embedding cosine** — same approach, using the learned 16-dim `emb_*` embeddings.
+4. **Final rule-augmented TestoAI recommender** — the real `recommend()` used by the app/CLI, including activity thresholds, food-group weighting, and curation rules.
+
+Methods 1-3 share the exact same seed foods (`SEED_FOODS`), candidate set, cosine-similarity method, and `TOP_N=10`; only the representation differs, so any difference between them is attributable to the representation itself. Method 4 is a system-level comparison, not a pure representation test — it intentionally adds rules on top of the embedding similarity.
+
+### Results
+
+Run against the full USDA dataset (6,894 rows):
+
+| Method | Avg protein (g) | Avg sugar (g) | Avg fiber (g) | Avg calories | Food groups |
+|---|---|---|---|---|---|
+| Macro baseline | 21.9 | 1.7 | 0.9 | 253.6 | 8 |
+| Raw nutrient baseline | 17.0 | 0.0 | 0.0 | 172.7 | 4 |
+| Autoencoder embedding | 19.7 | 0.0 | 0.0 | 146.3 | 4 |
+| Final TestoAI | 21.7 | 0.0 | 0.0 | 179.6 | 1 |
+
+The key comparison is raw nutrient baseline vs. autoencoder embedding: full-candidate-ranking (Spearman-equivalent) correlation between the two is **0.87**, but their top-10 lists overlap by only **2/10 (20%)**. See `evaluation/results.csv` for the full numbers, including macro-vs-embedding (0.85) and macro-vs-raw (0.95) correlations.
+
+### Interpretation
+
+The raw nutrient and autoencoder rankings had a rank correlation of 0.87, indicating that the learned representation preserves much of the overall similarity structure already present in normalized nutrient space. Their top-10 recommendations overlapped by only 20%, however, showing that the embedding still meaningfully reorders which foods end up as the closest matches to the seed prototype. Without labeled ground truth, this evaluation can't establish whether that reordering is better, worse, or just different — only that it's a distinct ranking, not a restatement of the raw-nutrient one. The final recommender's top-10 was drawn entirely from Beef Products, which shows that in practice its output is influenced substantially by the explicit activity, food-group, and curation rules layered on top of similarity, not by the embedding alone.
+
+### Limitations
+
+* There is no labeled ground truth for "correct" recommendations — these metrics describe ranking behavior and nutrient composition, not recommendation accuracy or medical effectiveness.
+* Results depend on the chosen seed foods (`SEED_FOODS`) and nutrient features, and may look different with a different seed set.
+* The final recommender (method 4) is not a pure representation comparison, since it includes explicit activity/food-group rules on top of embedding similarity.
+* Results generated from the bundled sample fixture (rather than the full USDA/Kaggle dataset) should not be interpreted as evidence of full-dataset model quality; `evaluate.py` prints the row count and warns when this may be the case.
 * Recommendations are heuristic/ranking-based, not medical advice.
-* There's no labeled ground truth yet, so ranking quality hasn't been evaluated against a baseline.
-* Full-quality results depend on the external USDA/Kaggle dataset; the bundled sample fixture is for demonstration and testing, not model quality.
-
-## Future work
-
-* Streamlit front end for the demo.
-* Evaluation against a baseline (e.g. cosine ranking vs. simple macro-distance) with a small labeled comparison set.
 
 ## License
 
