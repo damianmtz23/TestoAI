@@ -49,6 +49,10 @@ testoai --food-groups "Beef Products,Poultry Products" --activity medium
 * `--food-groups`: comma-separated FoodGroup names to restrict results to (default: all groups)
 * `--k`: cap the number of recommendations returned (default: full curated set)
 
+`--food-groups` only affects which of these groups the recommender scores from — passing a `FoodGroup` outside this list returns no results:
+
+Beef Products, Dairy and Egg Products, Fruits and Fruit Juices, Lamb, Veal, and Game Products, Finfish and Shellfish Products, Nut and Seed Products, Pork Products, Poultry Products
+
 ## Project structure
 
 ```
